@@ -12,8 +12,12 @@ document.addEventListener('DOMContentLoaded', () => {
   const toastMessage = document.getElementById('toast-message');
   const themeToggle = document.getElementById('theme-toggle');
 
+  // --- Supabase Initialization ---
+  const supabaseUrl = 'https://nhujrxbdkslbyzzudvuy.supabase.co';
+  const supabaseAnonKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5odWpyeGJka3NsYnl6enVkdnV5Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTUyNTIxMzgsImV4cCI6MjA3MDgyODEzOH0.VJAb2-m21XGBALQx74svCti5HDyQ4nADtQrBg6wz3u8';
+  const supabaseClient = supabase.createClient(supabaseUrl, supabaseAnonKey);
+
   // --- Firebase Initialization ---
-  // For Firebase JS SDK v7.20.0 and later, measurementId is optional
   const firebaseConfig = {
     apiKey: "AIzaSyCa1afy-ZtcAFj5pgB5hw2nPtrEgWEqIW8",
     authDomain: "four-digit-share.firebaseapp.com",
@@ -23,13 +27,10 @@ document.addEventListener('DOMContentLoaded', () => {
     appId: "1:576071952474:web:bb6d6baa88de0b29c91063",
     measurementId: "G-BEY5Q8Y1FM"
   };
-
-  // Use the modular SDK functions from the global firebase object
   const { initializeApp } = firebase;
   const { getStorage, ref, uploadBytesResumable, getDownloadURL } = firebase.storage;
-
   const app = initializeApp(firebaseConfig);
-  const storage = getStorage(app);
+  const firebaseStorage = getStorage(app);
 
   // --- Theme Toggle ---
   const applyTheme = () => {
@@ -69,6 +70,7 @@ document.addEventListener('DOMContentLoaded', () => {
   async function handleFilesUpload(files) {
       if (!files.length) return;
       const maxFileSize = 100 * 1024 * 1024;
+      const smallFileThreshold = 5 * 1024 * 1024; // 5 MB
       
       for (const file of files) {
           if (file.size > maxFileSize) {
@@ -81,27 +83,33 @@ document.addEventListener('DOMContentLoaded', () => {
       uploadStatusSection.innerHTML = `<div>Uploading ${files.length} file(s)...</div>`;
 
       try {
-          const uploadPromises = Array.from(files).map(file => {
+          const uploadPromises = Array.from(files).map(async (file) => {
               const uuid = crypto.randomUUID();
-              const storageRef = ref(storage, `${uuid}-${file.name}`);
-              const uploadTask = uploadBytesResumable(storageRef, file);
-              
-              return new Promise((resolve, reject) => {
-                   uploadTask.on('state_changed', 
-                      null, 
-                      reject, 
-                      async () => {
+              const filePath = `${uuid}-${file.name}`;
+
+              if (file.size <= smallFileThreshold) {
+                  // --- Upload to Supabase ---
+                  const { data, error } = await supabaseClient.storage.from('files').upload(filePath, file);
+                  if (error) throw error;
+                  const { data: { publicUrl } } = supabaseClient.storage.from('files').getPublicUrl(data.path);
+                  return {
+                      id: uuid, name: file.name, size: file.size, type: file.type,
+                      transferType: 'supabase', url: publicUrl
+                  };
+              } else {
+                  // --- Upload to Firebase ---
+                  const storageRef = ref(firebaseStorage, filePath);
+                  const uploadTask = uploadBytesResumable(storageRef, file);
+                  return new Promise((resolve, reject) => {
+                       uploadTask.on('state_changed', null, reject, async () => {
                           const downloadURL = await getDownloadURL(uploadTask.snapshot.ref);
                           resolve({
-                              id: uuid,
-                              name: file.name,
-                              size: file.size,
-                              type: file.type,
-                              transferType: 'firebase', // Corrected type
-                              url: downloadURL
+                              id: uuid, name: file.name, size: file.size, type: file.type,
+                              transferType: 'firebase', url: downloadURL
                           });
-                   });
-              });
+                       });
+                  });
+              }
           });
 
           const uploadedFilesMetadata = await Promise.all(uploadPromises);
@@ -112,7 +120,7 @@ document.addEventListener('DOMContentLoaded', () => {
           const transferPayload = {
               code: shortCode,
               files: uploadedFilesMetadata.map(meta => JSON.stringify(meta)),
-              type: 'firebase', // Corrected type
+              type: 'mixed',
               status: 'active',
               expiresAt: expiresAt.toISOString(),
           };
@@ -123,9 +131,7 @@ document.addEventListener('DOMContentLoaded', () => {
               body: JSON.stringify(transferPayload),
           });
 
-          if (!response.ok) {
-              throw new Error('Failed to create transfer on the server.');
-          }
+          if (!response.ok) throw new Error('Failed to create transfer on the server.');
           
           const newTransfer = await response.json();
           showSharingCode(newTransfer.code);
