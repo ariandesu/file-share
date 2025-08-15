@@ -17,357 +17,335 @@ const firebaseConfig = {
   measurementId: "G-BEY5Q8Y1FM"
 };
 
-  // --- INITIALIZE CLIENTS ---
-  let supabase, firebaseApp, db;
-  try {
-      if (!SUPABASE_URL || SUPABASE_URL === 'YOUR_SUPABASE_URL') {
-          throw new Error("Supabase URL is not configured.");
-      }
-      if (!SUPABASE_ANON_KEY || SUPABASE_ANON_KEY === 'YOUR_SUPABASE_ANON_KEY') {
-          throw new Error("Supabase Anon Key is not configured.");
-      }
-      if (!FIREBASE_CONFIG.apiKey || FIREBASE_CONFIG.apiKey === 'YOUR_API_KEY') {
-           throw new Error("Firebase config is not fully configured.");
-      }
-      
-      supabase = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-      firebaseApp = firebase.initializeApp(FIREBASE_CONFIG);
-      db = firebase.database();
-  } catch (error) {
-      console.error("Initialization Error:", error.message);
-      showToast("Configuration error. Please check your credentials.", "error");
-      // Disable app functionality if initialization fails
-      document.querySelectorAll('button, input').forEach(el => el.disabled = true);
-      return;
-  }
+ // --- INITIALIZE CLIENTS ---
+ let supabaseClient, db;
+ try {
+     if (!SUPABASE_URL || SUPABASE_URL === 'YOUR_SUPABASE_URL' || !SUPABASE_ANON_KEY || SUPABASE_ANON_KEY === 'YOUR_SUPABASE_ANON_KEY' || !FIREBASE_CONFIG.apiKey || FIREBASE_CONFIG.apiKey === 'YOUR_API_KEY') {
+         throw new Error("Supabase or Firebase credentials are not fully configured.");
+     }
+     
+     supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+     firebase.initializeApp(FIREBASE_CONFIG);
+     db = firebase.database();
+
+ } catch (error) {
+     console.error("Initialization Error:", error.message);
+     showToast("Configuration error. Please check your credentials.", "error");
+     document.querySelectorAll('button, input').forEach(el => el.disabled = true);
+     return;
+ }
+
+ // --- DOM ELEMENT SELECTORS ---
+ const themeToggle = document.getElementById('theme-toggle');
+ const dropZone = document.getElementById('drop-zone');
+ const fileInput = document.getElementById('file-input');
+ const browseBtn = document.getElementById('browse-btn');
+ const sendCard = document.getElementById('send-card');
+ const uploadStatusSection = document.getElementById('upload-status-section');
+ const codeInputs = document.querySelectorAll('.code-input');
+ const findBtn = document.getElementById('find-btn');
+ const transfersList = document.getElementById('transfers-list');
+ const toast = document.getElementById('toast');
+ const toastMessage = document.getElementById('toast-message');
+
+ // --- THEME TOGGLE FUNCTIONALITY ---
+ if (localStorage.getItem('theme') === 'dark') {
+     document.body.classList.add('dark');
+ }
+ themeToggle.addEventListener('click', () => {
+     document.body.classList.toggle('dark');
+     localStorage.setItem('theme', document.body.classList.contains('dark') ? 'dark' : 'light');
+ });
+
+ // --- LUCIDE ICONS INITIALIZATION ---
+ lucide.createIcons();
+
+ // --- EVENT DELEGATION FOR DYNAMIC BUTTONS ---
+ // This single event listener on the parent card will handle clicks
+ // for buttons that are added dynamically.
+ sendCard.addEventListener('click', (e) => {
+     const sendAnotherBtn = e.target.closest('#send-another-btn');
+     const copyCodeBtn = e.target.closest('#copy-code-btn');
+
+     if (sendAnotherBtn) {
+         window.location.reload();
+     }
+
+     if (copyCodeBtn) {
+         const code = document.getElementById('generated-code').textContent;
+         navigator.clipboard.writeText(code).then(() => {
+             showToast("Code copied to clipboard!");
+         }).catch(err => {
+             showToast("Failed to copy code.", "error");
+         });
+     }
+ });
 
 
-  // --- DOM ELEMENT SELECTORS ---
-  const themeToggle = document.getElementById('theme-toggle');
-  const dropZone = document.getElementById('drop-zone');
-  const fileInput = document.getElementById('file-input');
-  const browseBtn = document.getElementById('browse-btn');
-  const sendCard = document.getElementById('send-card');
-  const uploadStatusSection = document.getElementById('upload-status-section');
-  const codeInputs = document.querySelectorAll('.code-input');
-  const findBtn = document.getElementById('find-btn');
-  const transfersList = document.getElementById('transfers-list');
-  const toast = document.getElementById('toast');
-  const toastMessage = document.getElementById('toast-message');
+ // --- SEND FILES LOGIC ---
+ dropZone.addEventListener('dragover', (e) => {
+     e.preventDefault();
+     dropZone.classList.add('dragover');
+ });
 
-  // --- THEME TOGGLE FUNCTIONALITY ---
-  // Check for saved theme in localStorage and apply it
-  if (localStorage.getItem('theme') === 'dark') {
-      document.body.classList.add('dark');
-  }
+ dropZone.addEventListener('dragleave', (e) => {
+     e.preventDefault();
+     dropZone.classList.remove('dragover');
+ });
 
-  themeToggle.addEventListener('click', () => {
-      document.body.classList.toggle('dark');
-      // Save the user's preference
-      if (document.body.classList.contains('dark')) {
-          localStorage.setItem('theme', 'dark');
-      } else {
-          localStorage.removeItem('theme');
-      }
-  });
+ dropZone.addEventListener('drop', (e) => {
+     e.preventDefault();
+     dropZone.classList.remove('dragover');
+     const files = e.dataTransfer.files;
+     if (files.length) {
+         fileInput.files = files;
+         handleFiles(files);
+     }
+ });
 
-  // --- LUCIDE ICONS INITIALIZATION ---
-  lucide.createIcons();
+ dropZone.addEventListener('click', () => fileInput.click());
+ browseBtn.addEventListener('click', (e) => {
+     e.stopPropagation();
+     fileInput.click();
+ });
+ fileInput.addEventListener('change', () => handleFiles(fileInput.files));
 
-  // --- SEND FILES LOGIC ---
+ async function handleFiles(files) {
+     if (!files.length) return;
+     
+     const fileList = Array.from(files);
+     uploadStatusSection.innerHTML = '';
+     uploadStatusSection.classList.remove('hidden');
 
-  // 1. Drag and Drop Event Listeners
-  dropZone.addEventListener('dragover', (e) => {
-      e.preventDefault();
-      dropZone.classList.add('dragover');
-  });
+     const code = await generateUniqueCode();
+     if (!code) {
+         showToast("Could not generate a unique code. Please try again.", "error");
+         return;
+     }
 
-  dropZone.addEventListener('dragleave', (e) => {
-      e.preventDefault();
-      dropZone.classList.remove('dragover');
-  });
+     displayCode(code);
 
-  dropZone.addEventListener('drop', (e) => {
-      e.preventDefault();
-      dropZone.classList.remove('dragover');
-      const files = e.dataTransfer.files;
-      if (files.length) {
-          fileInput.files = files;
-          handleFiles(files);
-      }
-  });
+     const uploadPromises = fileList.map(file => uploadFile(file, code));
 
-  // 2. Browse Button and File Input Listeners
-  dropZone.addEventListener('click', () => fileInput.click());
-  browseBtn.addEventListener('click', (e) => {
-      e.stopPropagation(); // Prevent dropZone click event from firing
-      fileInput.click();
-  });
-  fileInput.addEventListener('change', () => handleFiles(fileInput.files));
+     try {
+         const fileDataArray = await Promise.all(uploadPromises);
+         const transferRef = db.ref(`transfers/${code}`);
+         await transferRef.set({
+             files: fileDataArray,
+             timestamp: firebase.database.ServerValue.TIMESTAMP
+         });
 
-  // 3. Handle File Selection and Upload
-  async function handleFiles(files) {
-      if (!files.length) return;
-      
-      const fileList = Array.from(files);
-      uploadStatusSection.innerHTML = ''; // Clear previous status
-      uploadStatusSection.classList.remove('hidden');
+         setTimeout(() => {
+             transferRef.remove();
+         }, 3600000); // Expire after 1 hour
 
-      // Generate a unique 4-digit code
-      const code = await generateUniqueCode();
-      if (!code) {
-          showToast("Could not generate a unique code. Please try again.", "error");
-          return;
-      }
+     } catch (error) {
+         console.error('Error during file handling:', error);
+         showToast("An error occurred during upload.", "error");
+         db.ref(`transfers/${code}`).remove();
+     }
+ }
 
-      // Display code immediately
-      displayCode(code);
+ async function uploadFile(file, code) {
+     const filePath = `${code}/${file.name}`;
+     const uploadStatusUI = createUploadStatusUI(file);
+     uploadStatusSection.appendChild(uploadStatusUI.wrapper);
 
-      const uploadPromises = fileList.map(file => uploadFile(file, code));
+     const { data, error }. = await supabaseClient.storage
+         .from('files')
+         .upload(filePath, file, {
+             cacheControl: '3600',
+             upsert: false
+         });
 
-      try {
-          const fileDataArray = await Promise.all(uploadPromises);
-          // Save file metadata to Firebase Realtime Database
-          const transferRef = db.ref(`transfers/${code}`);
-          await transferRef.set({
-              files: fileDataArray,
-              timestamp: firebase.database.ServerValue.TIMESTAMP
-          });
+     if (error) {
+         console.error('Supabase upload error:', error);
+         uploadStatusUI.status.textContent = 'Error';
+         uploadStatusUI.wrapper.classList.add('error');
+         throw error;
+     }
 
-          // Set data to expire after 1 hour (3600000 ms)
-          setTimeout(() => {
-              transferRef.remove();
-          }, 3600000);
+     const { data: { publicUrl } } = supabaseClient.storage
+         .from('files')
+         .getPublicUrl(filePath);
 
-      } catch (error) {
-          console.error('Error during file handling:', error);
-          showToast("An error occurred during upload.", "error");
-          // Clean up on error
-          db.ref(`transfers/${code}`).remove();
-      }
-  }
+     uploadStatusUI.status.textContent = 'Completed';
+     uploadStatusUI.progressBar.style.width = '100%';
+     uploadStatusUI.wrapper.classList.add('completed');
+     
+     return {
+         name: file.name,
+         size: file.size,
+         type: file.type,
+         url: publicUrl
+     };
+ }
+ 
+ async function generateUniqueCode() {
+     let code;
+     let isUnique = false;
+     let attempts = 0;
+     while (!isUnique && attempts < 100) {
+         code = Math.floor(1000 + Math.random() * 9000).toString();
+         const snapshot = await db.ref(`transfers/${code}`).once('value');
+         if (!snapshot.exists()) {
+             isUnique = true;
+         }
+         attempts++;
+     }
+     return isUnique ? code : null;
+ }
 
-  // 4. Upload a single file to Supabase
-  async function uploadFile(file, code) {
-      const filePath = `${code}/${file.name}`;
-      const uploadStatusUI = createUploadStatusUI(file);
-      uploadStatusSection.appendChild(uploadStatusUI.wrapper);
+ function createUploadStatusUI(file) {
+     const wrapper = document.createElement('div');
+     wrapper.className = 'upload-item';
+     
+     const icon = `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-file-text"><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/><polyline points="14 2 14 8 20 8"/><line x1="16" x2="8" y1="13" y2="13"/><line x1="16" x2="8" y1="17" y2="17"/><line x1="10" x2="8" y1="9" y2="9"/></svg>`;
+     
+     const fileName = document.createElement('p');
+     fileName.className = 'file-name';
+     fileName.textContent = file.name;
 
-      const { data, error } = await supabase.storage
-          .from('files') // Make sure you have a 'files' bucket in Supabase
-          .upload(filePath, file, {
-              cacheControl: '3600',
-              upsert: false
-          });
+     const fileSize = document.createElement('p');
+     fileSize.className = 'file-size';
+     fileSize.textContent = formatBytes(file.size);
 
-      if (error) {
-          console.error('Supabase upload error:', error);
-          uploadStatusUI.status.textContent = 'Error';
-          uploadStatusUI.wrapper.classList.add('error');
-          throw error;
-      }
+     const status = document.createElement('p');
+     status.className = 'upload-status-text';
+     status.textContent = 'Uploading...';
 
-      const { data: { publicUrl } } = supabase.storage
-          .from('files')
-          .getPublicUrl(filePath);
+     const progressWrapper = document.createElement('div');
+     progressWrapper.className = 'progress-wrapper';
+     const progressBar = document.createElement('div');
+     progressBar.className = 'progress-bar';
+     progressWrapper.appendChild(progressBar);
 
-      uploadStatusUI.status.textContent = 'Completed';
-      uploadStatusUI.progressBar.style.width = '100%';
-      uploadStatusUI.wrapper.classList.add('completed');
-      
-      return {
-          name: file.name,
-          size: file.size,
-          type: file.type,
-          url: publicUrl
-      };
-  }
-  
-  // 5. Generate a unique 4-digit code
-  async function generateUniqueCode() {
-      let code;
-      let isUnique = false;
-      let attempts = 0;
-      while (!isUnique && attempts < 100) {
-          code = Math.floor(1000 + Math.random() * 9000).toString();
-          const snapshot = await db.ref(`transfers/${code}`).once('value');
-          if (!snapshot.exists()) {
-              isUnique = true;
-          }
-          attempts++;
-      }
-      return isUnique ? code : null;
-  }
+     wrapper.innerHTML = icon;
+     const infoWrapper = document.createElement('div');
+     infoWrapper.className = 'file-info';
+     infoWrapper.appendChild(fileName);
+     infoWrapper.appendChild(fileSize);
+     wrapper.appendChild(infoWrapper);
+     wrapper.appendChild(status);
+     wrapper.appendChild(progressWrapper);
 
-  // 6. UI Helpers for Uploading
-  function createUploadStatusUI(file) {
-      const wrapper = document.createElement('div');
-      wrapper.className = 'upload-item';
-      
-      const icon = `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-file-text"><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/><polyline points="14 2 14 8 20 8"/><line x1="16" x2="8" y1="13" y2="13"/><line x1="16" x2="8" y1="17" y2="17"/><line x1="10" x2="8" y1="9" y2="9"/></svg>`;
-      
-      const fileName = document.createElement('p');
-      fileName.className = 'file-name';
-      fileName.textContent = file.name;
+     let width = 0;
+     const interval = setInterval(() => {
+         if (width < 95) {
+             width += 5;
+             progressBar.style.width = width + '%';
+         } else {
+             clearInterval(interval);
+         }
+     }, 200);
 
-      const fileSize = document.createElement('p');
-      fileSize.className = 'file-size';
-      fileSize.textContent = formatBytes(file.size);
+     return { wrapper, status, progressBar };
+ }
 
-      const status = document.createElement('p');
-      status.className = 'upload-status-text';
-      status.textContent = 'Uploading...';
+ function displayCode(code) {
+     sendCard.innerHTML = `
+         <h2 class="card-title">Your Code</h2>
+         <p class="card-description">Share this code with the recipient.</p>
+         <div class="generated-code-container">
+             <p id="generated-code" class="generated-code">${code}</p>
+             <button id="copy-code-btn" class="icon-button">
+                 <i data-lucide="copy"></i>
+             </button>
+         </div>
+         <button id="send-another-btn" class="button">Send More Files</button>
+     `;
+     lucide.createIcons();
+ }
 
-      const progressWrapper = document.createElement('div');
-      progressWrapper.className = 'progress-wrapper';
-      const progressBar = document.createElement('div');
-      progressBar.className = 'progress-bar';
-      progressWrapper.appendChild(progressBar);
+ // --- RECEIVE FILES LOGIC ---
+ codeInputs.forEach((input, index) => {
+     input.addEventListener('keyup', (e) => {
+         if (e.key >= 0 && e.key <= 9) {
+             if (index < codeInputs.length - 1) {
+                 codeInputs[index + 1].focus();
+             }
+         } else if (e.key === 'Backspace') {
+             if (index > 0) {
+                 codeInputs[index - 1].focus();
+             }
+         }
+         validateCodeInputs();
+     });
+ });
 
-      wrapper.innerHTML = icon;
-      const infoWrapper = document.createElement('div');
-      infoWrapper.className = 'file-info';
-      infoWrapper.appendChild(fileName);
-      infoWrapper.appendChild(fileSize);
-      wrapper.appendChild(infoWrapper);
-      wrapper.appendChild(status);
-      wrapper.appendChild(progressWrapper);
+ function validateCodeInputs() {
+     const code = Array.from(codeInputs).map(input => input.value).join('');
+     findBtn.disabled = code.length !== 4;
+ }
 
-      // Simulate progress for better UX
-      let width = 0;
-      const interval = setInterval(() => {
-          if (width < 95) {
-              width += 5;
-              progressBar.style.width = width + '%';
-          } else {
-              clearInterval(interval);
-          }
-      }, 200);
+ findBtn.addEventListener('click', async () => {
+     const code = Array.from(codeInputs).map(input => input.value).join('');
+     if (code.length !== 4) return;
 
+     findBtn.textContent = "Finding...";
+     findBtn.disabled = true;
 
-      return { wrapper, status, progressBar };
-  }
+     try {
+         const snapshot = await db.ref(`transfers/${code}`).once('value');
+         if (snapshot.exists()) {
+             const data = snapshot.val();
+             displayFiles(data.files);
+         } else {
+             showToast("Invalid or expired code.", "error");
+             transfersList.innerHTML = `
+                 <i data-lucide="search-x" class="placeholder-icon"></i>
+                 <p>No files found for this code.</p>
+             `;
+             lucide.createIcons();
+         }
+     } catch (error) {
+         console.error("Error fetching files:", error);
+         showToast("An error occurred while fetching files.", "error");
+     } finally {
+         findBtn.textContent = "Find Files";
+         validateCodeInputs();
+     }
+ });
 
-  function displayCode(code) {
-      sendCard.innerHTML = `
-          <h2 class="card-title">Your Code</h2>
-          <p class="card-description">Share this code with the recipient.</p>
-          <div class="generated-code-container">
-              <p id="generated-code" class="generated-code">${code}</p>
-              <button id="copy-code-btn" class="icon-button">
-                  <i data-lucide="copy"></i>
-              </button>
-          </div>
-          <button id="send-another-btn" class="button">Send More Files</button>
-      `;
-      lucide.createIcons();
+ function displayFiles(files) {
+     transfersList.innerHTML = '';
+     files.forEach(file => {
+         const fileItem = document.createElement('a');
+         fileItem.href = file.url;
+         fileItem.target = "_blank";
+         fileItem.download = file.name;
+         fileItem.className = 'file-download-item';
+         
+         const icon = `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-file-text"><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/><polyline points="14 2 14 8 20 8"/><line x1="16" x2="8" y1="13" y2="13"/><line x1="16" x2="8" y1="17" y2="17"/><line x1="10" x2="8" y1="9" y2="9"/></svg>`;
+         const downloadIcon = `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-download"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" x2="12" y1="15" y2="3"/></svg>`;
 
-      document.getElementById('copy-code-btn').addEventListener('click', () => {
-          navigator.clipboard.writeText(code).then(() => {
-              showToast("Code copied to clipboard!");
-          }).catch(err => {
-              showToast("Failed to copy code.", "error");
-          });
-      });
+         fileItem.innerHTML = `
+             <div class="file-icon">${icon}</div>
+             <div class="file-details">
+                 <p class="file-name">${file.name}</p>
+                 <p class="file-size">${formatBytes(file.size)}</p>
+             </div>
+             <div class="download-icon">${downloadIcon}</div>
+         `;
+         transfersList.appendChild(fileItem);
+     });
+ }
 
-      document.getElementById('send-another-btn').addEventListener('click', () => {
-          window.location.reload();
-      });
-  }
+ // --- UTILITY FUNCTIONS ---
+ function formatBytes(bytes, decimals = 2) {
+     if (bytes === 0) return '0 Bytes';
+     const k = 1024;
+     const dm = decimals < 0 ? 0 : decimals;
+     const sizes = ['Bytes', 'KB', 'MB', 'GB', 'TB'];
+     const i = Math.floor(Math.log(bytes) / Math.log(k));
+     return parseFloat((bytes / Math.pow(k, i)).toFixed(dm)) + ' ' + sizes[i];
+ }
 
-  // --- RECEIVE FILES LOGIC ---
-
-  // 1. Handle Code Input
-  codeInputs.forEach((input, index) => {
-      input.addEventListener('keyup', (e) => {
-          if (e.key >= 0 && e.key <= 9) {
-              if (index < codeInputs.length - 1) {
-                  codeInputs[index + 1].focus();
-              }
-          } else if (e.key === 'Backspace') {
-              if (index > 0) {
-                  codeInputs[index - 1].focus();
-              }
-          }
-          validateCodeInputs();
-      });
-  });
-
-  function validateCodeInputs() {
-      const code = Array.from(codeInputs).map(input => input.value).join('');
-      findBtn.disabled = code.length !== 4;
-  }
-
-  // 2. Find and Display Files
-  findBtn.addEventListener('click', async () => {
-      const code = Array.from(codeInputs).map(input => input.value).join('');
-      if (code.length !== 4) return;
-
-      findBtn.textContent = "Finding...";
-      findBtn.disabled = true;
-
-      try {
-          const snapshot = await db.ref(`transfers/${code}`).once('value');
-          if (snapshot.exists()) {
-              const data = snapshot.val();
-              displayFiles(data.files);
-          } else {
-              showToast("Invalid or expired code.", "error");
-              transfersList.innerHTML = `
-                  <i data-lucide="search-x" class="placeholder-icon"></i>
-                  <p>No files found for this code.</p>
-              `;
-              lucide.createIcons();
-          }
-      } catch (error) {
-          console.error("Error fetching files:", error);
-          showToast("An error occurred while fetching files.", "error");
-      } finally {
-          findBtn.textContent = "Find Files";
-          validateCodeInputs();
-      }
-  });
-
-  // 3. UI Helper for Displaying Found Files
-  function displayFiles(files) {
-      transfersList.innerHTML = ''; // Clear placeholder
-      files.forEach(file => {
-          const fileItem = document.createElement('a');
-          fileItem.href = file.url;
-          fileItem.target = "_blank"; // Open in new tab
-          fileItem.download = file.name;
-          fileItem.className = 'file-download-item';
-          
-          const icon = `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-file-text"><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/><polyline points="14 2 14 8 20 8"/><line x1="16" x2="8" y1="13" y2="13"/><line x1="16" x2="8" y1="17" y2="17"/><line x1="10" x2="8" y1="9" y2="9"/></svg>`;
-          const downloadIcon = `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-download"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" x2="12" y1="15" y2="3"/></svg>`;
-
-          fileItem.innerHTML = `
-              <div class="file-icon">${icon}</div>
-              <div class="file-details">
-                  <p class="file-name">${file.name}</p>
-                  <p class="file-size">${formatBytes(file.size)}</p>
-              </div>
-              <div class="download-icon">${downloadIcon}</div>
-          `;
-          transfersList.appendChild(fileItem);
-      });
-  }
-
-  // --- UTILITY FUNCTIONS ---
-  function formatBytes(bytes, decimals = 2) {
-      if (bytes === 0) return '0 Bytes';
-      const k = 1024;
-      const dm = decimals < 0 ? 0 : decimals;
-      const sizes = ['Bytes', 'KB', 'MB', 'GB', 'TB'];
-      const i = Math.floor(Math.log(bytes) / Math.log(k));
-      return parseFloat((bytes / Math.pow(k, i)).toFixed(dm)) + ' ' + sizes[i];
-  }
-
-  function showToast(message, type = "success") {
-      toastMessage.textContent = message;
-      toast.className = `toast show ${type}`;
-      setTimeout(() => {
-          toast.className = 'toast';
-      }, 3000);
-  }
+ function showToast(message, type = "success") {
+     toastMessage.textContent = message;
+     toast.className = `toast show ${type}`;
+     setTimeout(() => {
+         toast.className = 'toast';
+     }, 3000);
+ }
 });
