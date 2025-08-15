@@ -1,0 +1,15 @@
+* { box-sizing: border-box; }
+body { font-family: Arial, sans-serif; margin: 0; background: #0b0f14; color: #e7eef7; }
+main { max-width: 720px; margin: 40px auto; padding: 0 16px; }
+h1 { text-align: center; margin-bottom: 24px; }
+.card { background: #121824; padding: 16px; border-radius: 16px; margin-bottom: 20px; box-shadow: 0 8px 30px rgba(0,0,0,.35); }
+.row { display: flex; gap: 8px; align-items: center; margin: 8px 0; }
+input[type="file"], input[type="text"], input[type="number"] { width: 100%; padding: 10px; border-radius: 10px; border: 1px solid #2b3a55; background: #0f1420; color: #e7eef7; }
+button { margin-top: 10px; padding: 10px 16px; border: 0; border-radius: 12px; background: #4f8cff; color: #fff; cursor: pointer; font-weight: 700; }
+button:hover { opacity: .9; }
+.status { margin-top: 10px; min-height: 20px; color: #c8d6ff; }
+.code { margin-top: 12px; font-size: 28px; font-weight: 800; letter-spacing: 4px; text-align: center; padding: 12px; background: #0f1420; border: 1px dashed #38507a; border-radius: 12px; }
+.progress { margin-top: 10px; width: 100%; height: 10px; background: #1a2335; border-radius: 9999px; overflow: hidden; }
+.bar { height: 100%; width: 0%; background: #4f8cff; transition: width .1s linear; }
+.hidden { display: none; }
+footer { text-align: center; color: #8ea2c6; margin-top: 16px; }

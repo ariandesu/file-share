@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>4-Digit File Share</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <main>
+    <h1>4-Digit File Share</h1>
+
+    <section class="card">
+      <h2>Send a file</h2>
+      <input id="fileInput" type="file" />
+      <div class="row">
+        <label>Size threshold (MB):</label>
+        <input id="threshold" type="number" value="100" min="1" />
+      </div>
+      <button id="sendBtn">Send</button>
+      <div id="sendStatus" class="status"></div>
+      <div id="progressWrap" class="progress hidden">
+        <div id="progressBar" class="bar"></div>
+      </div>
+      <div id="codeBox" class="code hidden"></div>
+    </section>
+
+    <section class="card">
+      <h2>Receive a file</h2>
+      <input id="codeInput" type="text" placeholder="Enter 4-digit code" maxlength="4" />
+      <button id="receiveBtn">Receive</button>
+      <div id="receiveStatus" class="status"></div>
+    </section>
+
+    <footer>
+      <small>Small files use cloud storage; large files use P2P (WebRTC). No login.</small>
+    </footer>
+  </main>
+
+  <script type="module" src="script.js"></script>
+</body>
+</html>
