@@ -23,8 +23,13 @@ document.addEventListener('DOMContentLoaded', () => {
     appId: "1:576071952474:web:bb6d6baa88de0b29c91063",
     measurementId: "G-BEY5Q8Y1FM"
   };
-  const app = firebase.initializeApp(firebaseConfig);
-  const storage = firebase.storage(app);
+
+  // Use the modular SDK functions from the global firebase object
+  const { initializeApp } = firebase;
+  const { getStorage, ref, uploadBytesResumable, getDownloadURL } = firebase.storage;
+
+  const app = initializeApp(firebaseConfig);
+  const storage = getStorage(app);
 
   // --- Theme Toggle ---
   const applyTheme = () => {
@@ -78,20 +83,23 @@ document.addEventListener('DOMContentLoaded', () => {
       try {
           const uploadPromises = Array.from(files).map(file => {
               const uuid = crypto.randomUUID();
-              const storageRef = storage.ref(`${uuid}-${file.name}`);
-              const uploadTask = storage.uploadBytesResumable(storageRef, file);
+              const storageRef = ref(storage, `${uuid}-${file.name}`);
+              const uploadTask = uploadBytesResumable(storageRef, file);
               
               return new Promise((resolve, reject) => {
-                   uploadTask.on('state_changed', null, reject, async () => {
-                      const downloadURL = await storage.getDownloadURL(uploadTask.snapshot.ref);
-                      resolve({
-                          id: uuid,
-                          name: file.name,
-                          size: file.size,
-                          type: file.type,
-                          transferType: 'supabase',
-                          url: downloadURL
-                      });
+                   uploadTask.on('state_changed', 
+                      null, 
+                      reject, 
+                      async () => {
+                          const downloadURL = await getDownloadURL(uploadTask.snapshot.ref);
+                          resolve({
+                              id: uuid,
+                              name: file.name,
+                              size: file.size,
+                              type: file.type,
+                              transferType: 'firebase', // Corrected type
+                              url: downloadURL
+                          });
                    });
               });
           });
@@ -104,7 +112,7 @@ document.addEventListener('DOMContentLoaded', () => {
           const transferPayload = {
               code: shortCode,
               files: uploadedFilesMetadata.map(meta => JSON.stringify(meta)),
-              type: 'supabase',
+              type: 'firebase', // Corrected type
               status: 'active',
               expiresAt: expiresAt.toISOString(),
           };
