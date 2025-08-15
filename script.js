@@ -13,7 +13,16 @@ document.addEventListener('DOMContentLoaded', () => {
   const themeToggle = document.getElementById('theme-toggle');
 
   // --- Firebase Initialization ---
-  const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : { apiKey: "AIza...", authDomain: "...", projectId: "...", storageBucket: "...", messagingSenderId: "...", appId: "..." };
+  // For Firebase JS SDK v7.20.0 and later, measurementId is optional
+  const firebaseConfig = {
+    apiKey: "AIzaSyCa1afy-ZtcAFj5pgB5hw2nPtrEgWEqIW8",
+    authDomain: "four-digit-share.firebaseapp.com",
+    projectId: "four-digit-share",
+    storageBucket: "four-digit-share.appspot.com",
+    messagingSenderId: "576071952474",
+    appId: "1:576071952474:web:bb6d6baa88de0b29c91063",
+    measurementId: "G-BEY5Q8Y1FM"
+  };
   const app = firebase.initializeApp(firebaseConfig);
   const storage = firebase.storage(app);
 
