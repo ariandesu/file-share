@@ -236,6 +236,13 @@ body {
   opacity: 0.5;
   cursor: not-allowed;
 }
+/* Style for the specific "Choose Files" button */
+#browse-btn {
+  margin-top: 1rem;
+  padding: 0.5rem 1rem;
+  width: auto; /* Override the full width */
+}
+
 
 /* --- FEATURES SECTION --- */
 .features-section {
