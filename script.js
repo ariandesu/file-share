@@ -1,262 +1,359 @@
+// --- Wait for the DOM to be fully loaded before running the script ---
 document.addEventListener('DOMContentLoaded', () => {
-  // --- DOM Element References ---
+
+  // --- SUPABASE & FIREBASE CREDENTIALS (REPLACE WITH YOURS) ---
+  // IMPORTANT: Replace these placeholder values with your actual
+  // Supabase and Firebase project credentials.
+  const SUPABASE_URL = 'https://nhujrxbdkslbyzzudvuy.supabase.co'; // e.g., 'https://xyz.supabase.co'
+  const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5odWpyeGJka3NsYnl6enVkdnV5Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTUyNTIxMzgsImV4cCI6MjA3MDgyODEzOH0.VJAb2-m21XGBALQx74svCti5HDyQ4nADtQrBg6wz3u8';
+// For Firebase JS SDK v7.20.0 and later, measurementId is optional
+const firebaseConfig = {
+  apiKey: "AIzaSyCa1afy-ZtcAFj5pgB5hw2nPtrEgWEqIW8",
+  authDomain: "four-digit-share.firebaseapp.com",
+  projectId: "four-digit-share",
+  storageBucket: "four-digit-share.firebasestorage.app",
+  messagingSenderId: "576071952474",
+  appId: "1:576071952474:web:bb6d6baa88de0b29c91063",
+  measurementId: "G-BEY5Q8Y1FM"
+};
+
+  // --- INITIALIZE CLIENTS ---
+  let supabase, firebaseApp, db;
+  try {
+      if (!SUPABASE_URL || SUPABASE_URL === 'YOUR_SUPABASE_URL') {
+          throw new Error("Supabase URL is not configured.");
+      }
+      if (!SUPABASE_ANON_KEY || SUPABASE_ANON_KEY === 'YOUR_SUPABASE_ANON_KEY') {
+          throw new Error("Supabase Anon Key is not configured.");
+      }
+      if (!FIREBASE_CONFIG.apiKey || FIREBASE_CONFIG.apiKey === 'YOUR_API_KEY') {
+           throw new Error("Firebase config is not fully configured.");
+      }
+      
+      supabase = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+      firebaseApp = firebase.initializeApp(FIREBASE_CONFIG);
+      db = firebase.database();
+  } catch (error) {
+      console.error("Initialization Error:", error.message);
+      showToast("Configuration error. Please check your credentials.", "error");
+      // Disable app functionality if initialization fails
+      document.querySelectorAll('button, input').forEach(el => el.disabled = true);
+      return;
+  }
+
+
+  // --- DOM ELEMENT SELECTORS ---
+  const themeToggle = document.getElementById('theme-toggle');
   const dropZone = document.getElementById('drop-zone');
   const fileInput = document.getElementById('file-input');
   const browseBtn = document.getElementById('browse-btn');
+  const sendCard = document.getElementById('send-card');
   const uploadStatusSection = document.getElementById('upload-status-section');
-  const codeInputsContainer = document.getElementById('code-inputs');
   const codeInputs = document.querySelectorAll('.code-input');
   const findBtn = document.getElementById('find-btn');
   const transfersList = document.getElementById('transfers-list');
   const toast = document.getElementById('toast');
   const toastMessage = document.getElementById('toast-message');
-  const themeToggle = document.getElementById('theme-toggle');
 
-  // --- Supabase Initialization ---
-  const supabaseUrl = 'https://nhujrxbdkslbyzzudvuy.supabase.co';
-  const supabaseAnonKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5odWpyeGJka3NsYnl6enVkdnV5Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTUyNTIxMzgsImV4cCI6MjA3MDgyODEzOH0.VJAb2-m21XGBALQx74svCti5HDyQ4nADtQrBg6wz3u8';
-  const supabaseClient = supabase.createClient(supabaseUrl, supabaseAnonKey);
+  // --- THEME TOGGLE FUNCTIONALITY ---
+  // Check for saved theme in localStorage and apply it
+  if (localStorage.getItem('theme') === 'dark') {
+      document.body.classList.add('dark');
+  }
 
-  // --- Firebase Initialization ---
-  const firebaseConfig = {
-    apiKey: "AIzaSyCa1afy-ZtcAFj5pgB5hw2nPtrEgWEqIW8",
-    authDomain: "four-digit-share.firebaseapp.com",
-    projectId: "four-digit-share",
-    storageBucket: "four-digit-share.appspot.com",
-    messagingSenderId: "576071952474",
-    appId: "1:576071952474:web:bb6d6baa88de0b29c91063",
-    measurementId: "G-BEY5Q8Y1FM"
-  };
-  const { initializeApp } = firebase;
-  const { getStorage, ref, uploadBytesResumable, getDownloadURL } = firebase.storage;
-  const app = initializeApp(firebaseConfig);
-  const firebaseStorage = getStorage(app);
-
-  // --- Theme Toggle ---
-  const applyTheme = () => {
-      const isDarkMode = localStorage.getItem('theme') === 'dark';
-      document.documentElement.classList.toggle('dark', isDarkMode);
-  };
   themeToggle.addEventListener('click', () => {
-      const isDarkMode = document.documentElement.classList.toggle('dark');
-      localStorage.setItem('theme', isDarkMode ? 'dark' : 'light');
-  });
-  applyTheme();
-
-  // --- Icon Initialization ---
-  const iconInterval = setInterval(() => {
-      if (typeof lucide !== 'undefined') {
-          lucide.createIcons();
-          clearInterval(iconInterval);
+      document.body.classList.toggle('dark');
+      // Save the user's preference
+      if (document.body.classList.contains('dark')) {
+          localStorage.setItem('theme', 'dark');
+      } else {
+          localStorage.removeItem('theme');
       }
-  }, 100);
-
-  // --- Upload Logic ---
-  browseBtn.addEventListener('click', () => fileInput.click());
-  fileInput.addEventListener('change', () => {
-      if (fileInput.files.length) handleFilesUpload(fileInput.files);
   });
-  dropZone.addEventListener('dragover', (e) => { e.preventDefault(); dropZone.classList.add('dragover'); });
-  dropZone.addEventListener('dragleave', (e) => { e.preventDefault(); dropZone.classList.remove('dragover'); });
+
+  // --- LUCIDE ICONS INITIALIZATION ---
+  lucide.createIcons();
+
+  // --- SEND FILES LOGIC ---
+
+  // 1. Drag and Drop Event Listeners
+  dropZone.addEventListener('dragover', (e) => {
+      e.preventDefault();
+      dropZone.classList.add('dragover');
+  });
+
+  dropZone.addEventListener('dragleave', (e) => {
+      e.preventDefault();
+      dropZone.classList.remove('dragover');
+  });
+
   dropZone.addEventListener('drop', (e) => {
       e.preventDefault();
       dropZone.classList.remove('dragover');
-      if (e.dataTransfer.files.length) {
-          fileInput.files = e.dataTransfer.files;
-          handleFilesUpload(e.dataTransfer.files);
+      const files = e.dataTransfer.files;
+      if (files.length) {
+          fileInput.files = files;
+          handleFiles(files);
       }
   });
 
-  async function handleFilesUpload(files) {
+  // 2. Browse Button and File Input Listeners
+  dropZone.addEventListener('click', () => fileInput.click());
+  browseBtn.addEventListener('click', (e) => {
+      e.stopPropagation(); // Prevent dropZone click event from firing
+      fileInput.click();
+  });
+  fileInput.addEventListener('change', () => handleFiles(fileInput.files));
+
+  // 3. Handle File Selection and Upload
+  async function handleFiles(files) {
       if (!files.length) return;
-      const maxFileSize = 100 * 1024 * 1024;
-      const smallFileThreshold = 5 * 1024 * 1024; // 5 MB
       
-      for (const file of files) {
-          if (file.size > maxFileSize) {
-              showToast(`File "${file.name}" is too large. Max size is ${formatBytes(maxFileSize)}.`, true);
-              return;
-          }
-      }
-      
+      const fileList = Array.from(files);
+      uploadStatusSection.innerHTML = ''; // Clear previous status
       uploadStatusSection.classList.remove('hidden');
-      uploadStatusSection.innerHTML = `<div>Uploading ${files.length} file(s)...</div>`;
+
+      // Generate a unique 4-digit code
+      const code = await generateUniqueCode();
+      if (!code) {
+          showToast("Could not generate a unique code. Please try again.", "error");
+          return;
+      }
+
+      // Display code immediately
+      displayCode(code);
+
+      const uploadPromises = fileList.map(file => uploadFile(file, code));
 
       try {
-          const uploadPromises = Array.from(files).map(async (file) => {
-              const uuid = crypto.randomUUID();
-              const filePath = `${uuid}-${file.name}`;
-
-              if (file.size <= smallFileThreshold) {
-                  // --- Upload to Supabase ---
-                  const { data, error } = await supabaseClient.storage.from('files').upload(filePath, file);
-                  if (error) throw error;
-                  const { data: { publicUrl } } = supabaseClient.storage.from('files').getPublicUrl(data.path);
-                  return {
-                      id: uuid, name: file.name, size: file.size, type: file.type,
-                      transferType: 'supabase', url: publicUrl
-                  };
-              } else {
-                  // --- Upload to Firebase ---
-                  const storageRef = ref(firebaseStorage, filePath);
-                  const uploadTask = uploadBytesResumable(storageRef, file);
-                  return new Promise((resolve, reject) => {
-                       uploadTask.on('state_changed', null, reject, async () => {
-                          const downloadURL = await getDownloadURL(uploadTask.snapshot.ref);
-                          resolve({
-                              id: uuid, name: file.name, size: file.size, type: file.type,
-                              transferType: 'firebase', url: downloadURL
-                          });
-                       });
-                  });
-              }
+          const fileDataArray = await Promise.all(uploadPromises);
+          // Save file metadata to Firebase Realtime Database
+          const transferRef = db.ref(`transfers/${code}`);
+          await transferRef.set({
+              files: fileDataArray,
+              timestamp: firebase.database.ServerValue.TIMESTAMP
           });
 
-          const uploadedFilesMetadata = await Promise.all(uploadPromises);
+          // Set data to expire after 1 hour (3600000 ms)
+          setTimeout(() => {
+              transferRef.remove();
+          }, 3600000);
 
-          const shortCode = (Math.floor(1000 + Math.random() * 9000)).toString();
-          const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000);
+      } catch (error) {
+          console.error('Error during file handling:', error);
+          showToast("An error occurred during upload.", "error");
+          // Clean up on error
+          db.ref(`transfers/${code}`).remove();
+      }
+  }
 
-          const transferPayload = {
-              code: shortCode,
-              files: uploadedFilesMetadata.map(meta => JSON.stringify(meta)),
-              type: 'mixed',
-              status: 'active',
-              expiresAt: expiresAt.toISOString(),
-          };
+  // 4. Upload a single file to Supabase
+  async function uploadFile(file, code) {
+      const filePath = `${code}/${file.name}`;
+      const uploadStatusUI = createUploadStatusUI(file);
+      uploadStatusSection.appendChild(uploadStatusUI.wrapper);
 
-          const response = await fetch('/api/transfers', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify(transferPayload),
+      const { data, error } = await supabase.storage
+          .from('files') // Make sure you have a 'files' bucket in Supabase
+          .upload(filePath, file, {
+              cacheControl: '3600',
+              upsert: false
           });
 
-          if (!response.ok) throw new Error('Failed to create transfer on the server.');
-          
-          const newTransfer = await response.json();
-          showSharingCode(newTransfer.code);
-
-      } catch(error) {
-          console.error("Upload process failed:", error);
-          showToast("An error occurred during upload. Please try again.", true);
-          uploadStatusSection.classList.add('hidden');
+      if (error) {
+          console.error('Supabase upload error:', error);
+          uploadStatusUI.status.textContent = 'Error';
+          uploadStatusUI.wrapper.classList.add('error');
+          throw error;
       }
-  }
 
-  function showSharingCode(code) {
-       uploadStatusSection.innerHTML = `
-          <div class="text-center bg-accent text-accent-foreground p-4 rounded-md" style="background-color: var(--accent); color: var(--accent-foreground); padding: 1rem; border-radius: 0.375rem;">
-              <p style="font-weight: 500; margin-bottom: 0.5rem;">🎉 Files uploaded! Your code is:</p>
-              <div style="font-size: 2.25rem; font-weight: bold; letter-spacing: 0.1em; color: var(--primary);">${code}</div>
-              <p style="font-size: 0.875rem; color: var(--muted-foreground); margin-top: 0.5rem;">Share this code with the recipient.</p>
-          </div>
-      `;
-  }
+      const { data: { publicUrl } } = supabase.storage
+          .from('files')
+          .getPublicUrl(filePath);
 
-  // --- Download Logic ---
-  codeInputsContainer.addEventListener('input', handleCodeInput);
-  codeInputsContainer.addEventListener('keydown', handleCodeKeydown);
-  findBtn.addEventListener('click', findFilesByCode);
-
-  function handleCodeInput(e) {
-      const input = e.target;
-      const index = parseInt(input.dataset.index);
-      if (input.value && index < codeInputs.length - 1) {
-          codeInputs[index + 1].focus();
-      }
-      validateCode();
-  }
-
-  function handleCodeKeydown(e) {
-      const input = e.target;
-      const index = parseInt(input.dataset.index);
-      if (e.key === 'Backspace' && !input.value && index > 0) {
-          codeInputs[index - 1].focus();
-      }
+      uploadStatusUI.status.textContent = 'Completed';
+      uploadStatusUI.progressBar.style.width = '100%';
+      uploadStatusUI.wrapper.classList.add('completed');
+      
+      return {
+          name: file.name,
+          size: file.size,
+          type: file.type,
+          url: publicUrl
+      };
   }
   
-  function validateCode() {
+  // 5. Generate a unique 4-digit code
+  async function generateUniqueCode() {
+      let code;
+      let isUnique = false;
+      let attempts = 0;
+      while (!isUnique && attempts < 100) {
+          code = Math.floor(1000 + Math.random() * 9000).toString();
+          const snapshot = await db.ref(`transfers/${code}`).once('value');
+          if (!snapshot.exists()) {
+              isUnique = true;
+          }
+          attempts++;
+      }
+      return isUnique ? code : null;
+  }
+
+  // 6. UI Helpers for Uploading
+  function createUploadStatusUI(file) {
+      const wrapper = document.createElement('div');
+      wrapper.className = 'upload-item';
+      
+      const icon = `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-file-text"><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/><polyline points="14 2 14 8 20 8"/><line x1="16" x2="8" y1="13" y2="13"/><line x1="16" x2="8" y1="17" y2="17"/><line x1="10" x2="8" y1="9" y2="9"/></svg>`;
+      
+      const fileName = document.createElement('p');
+      fileName.className = 'file-name';
+      fileName.textContent = file.name;
+
+      const fileSize = document.createElement('p');
+      fileSize.className = 'file-size';
+      fileSize.textContent = formatBytes(file.size);
+
+      const status = document.createElement('p');
+      status.className = 'upload-status-text';
+      status.textContent = 'Uploading...';
+
+      const progressWrapper = document.createElement('div');
+      progressWrapper.className = 'progress-wrapper';
+      const progressBar = document.createElement('div');
+      progressBar.className = 'progress-bar';
+      progressWrapper.appendChild(progressBar);
+
+      wrapper.innerHTML = icon;
+      const infoWrapper = document.createElement('div');
+      infoWrapper.className = 'file-info';
+      infoWrapper.appendChild(fileName);
+      infoWrapper.appendChild(fileSize);
+      wrapper.appendChild(infoWrapper);
+      wrapper.appendChild(status);
+      wrapper.appendChild(progressWrapper);
+
+      // Simulate progress for better UX
+      let width = 0;
+      const interval = setInterval(() => {
+          if (width < 95) {
+              width += 5;
+              progressBar.style.width = width + '%';
+          } else {
+              clearInterval(interval);
+          }
+      }, 200);
+
+
+      return { wrapper, status, progressBar };
+  }
+
+  function displayCode(code) {
+      sendCard.innerHTML = `
+          <h2 class="card-title">Your Code</h2>
+          <p class="card-description">Share this code with the recipient.</p>
+          <div class="generated-code-container">
+              <p id="generated-code" class="generated-code">${code}</p>
+              <button id="copy-code-btn" class="icon-button">
+                  <i data-lucide="copy"></i>
+              </button>
+          </div>
+          <button id="send-another-btn" class="button">Send More Files</button>
+      `;
+      lucide.createIcons();
+
+      document.getElementById('copy-code-btn').addEventListener('click', () => {
+          navigator.clipboard.writeText(code).then(() => {
+              showToast("Code copied to clipboard!");
+          }).catch(err => {
+              showToast("Failed to copy code.", "error");
+          });
+      });
+
+      document.getElementById('send-another-btn').addEventListener('click', () => {
+          window.location.reload();
+      });
+  }
+
+  // --- RECEIVE FILES LOGIC ---
+
+  // 1. Handle Code Input
+  codeInputs.forEach((input, index) => {
+      input.addEventListener('keyup', (e) => {
+          if (e.key >= 0 && e.key <= 9) {
+              if (index < codeInputs.length - 1) {
+                  codeInputs[index + 1].focus();
+              }
+          } else if (e.key === 'Backspace') {
+              if (index > 0) {
+                  codeInputs[index - 1].focus();
+              }
+          }
+          validateCodeInputs();
+      });
+  });
+
+  function validateCodeInputs() {
       const code = Array.from(codeInputs).map(input => input.value).join('');
       findBtn.disabled = code.length !== 4;
   }
 
-  async function findFilesByCode() {
+  // 2. Find and Display Files
+  findBtn.addEventListener('click', async () => {
       const code = Array.from(codeInputs).map(input => input.value).join('');
       if (code.length !== 4) return;
 
-      findBtn.textContent = 'Searching...';
+      findBtn.textContent = "Finding...";
       findBtn.disabled = true;
 
       try {
-          const response = await fetch(`/api/transfers/${code}`);
-          
-          if (response.status === 404) {
-              showToast("Invalid code or transfer has expired.", true);
-              displayNoFilesFound();
-              return;
+          const snapshot = await db.ref(`transfers/${code}`).once('value');
+          if (snapshot.exists()) {
+              const data = snapshot.val();
+              displayFiles(data.files);
+          } else {
+              showToast("Invalid or expired code.", "error");
+              transfersList.innerHTML = `
+                  <i data-lucide="search-x" class="placeholder-icon"></i>
+                  <p>No files found for this code.</p>
+              `;
+              lucide.createIcons();
           }
-
-          if (!response.ok) {
-              throw new Error('Failed to fetch transfer data.');
-          }
-
-          const transferData = await response.json();
-          displayFoundFiles(transferData.files);
-
       } catch (error) {
-          console.error("Error finding files:", error);
-          showToast("An error occurred while searching for the files.", true);
+          console.error("Error fetching files:", error);
+          showToast("An error occurred while fetching files.", "error");
       } finally {
-          resetFindButton();
+          findBtn.textContent = "Find Files";
+          validateCodeInputs();
       }
-  }
-  
-  function displayFoundFiles(filesJson) {
-      transfersList.innerHTML = '';
-      const files = filesJson.map(fileStr => JSON.parse(fileStr));
-      
-      if (files.length === 0) {
-          displayNoFilesFound();
-          return;
-      }
+  });
 
-      files.forEach(fileData => {
-          const fileElement = document.createElement('div');
-          fileElement.className = 'flex items-center justify-between bg-secondary p-3 rounded-md';
-          fileElement.style.display = 'flex';
-          fileElement.style.alignItems = 'center';
-          fileElement.style.justifyContent = 'space-between';
-          fileElement.style.backgroundColor = 'var(--secondary)';
-          fileElement.style.padding = '0.75rem';
-          fileElement.style.borderRadius = '0.375rem';
+  // 3. UI Helper for Displaying Found Files
+  function displayFiles(files) {
+      transfersList.innerHTML = ''; // Clear placeholder
+      files.forEach(file => {
+          const fileItem = document.createElement('a');
+          fileItem.href = file.url;
+          fileItem.target = "_blank"; // Open in new tab
+          fileItem.download = file.name;
+          fileItem.className = 'file-download-item';
+          
+          const icon = `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-file-text"><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/><polyline points="14 2 14 8 20 8"/><line x1="16" x2="8" y1="13" y2="13"/><line x1="16" x2="8" y1="17" y2="17"/><line x1="10" x2="8" y1="9" y2="9"/></svg>`;
+          const downloadIcon = `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-download"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" x2="12" y1="15" y2="3"/></svg>`;
 
-          fileElement.innerHTML = `
-              <div>
-                  <p style="font-weight: 600; color: var(--secondary-foreground);">${fileData.name}</p>
-                  <p style="font-size: 0.875rem; color: var(--muted-foreground);">${formatBytes(fileData.size)}</p>
+          fileItem.innerHTML = `
+              <div class="file-icon">${icon}</div>
+              <div class="file-details">
+                  <p class="file-name">${file.name}</p>
+                  <p class="file-size">${formatBytes(file.size)}</p>
               </div>
-              <a href="${fileData.url}" target="_blank" class="button" style="width: auto; padding: 0.5rem 0.75rem; font-size: 0.875rem;">
-                  Download
-              </a>
+              <div class="download-icon">${downloadIcon}</div>
           `;
-          transfersList.appendChild(fileElement);
+          transfersList.appendChild(fileItem);
       });
   }
 
-  function displayNoFilesFound() {
-       transfersList.innerHTML = `
-          <i data-lucide="download-cloud" class="placeholder-icon"></i>
-          <p>No files found for this code.</p>
-       `;
-       lucide.createIcons();
-  }
-  
-  function resetFindButton() {
-      findBtn.textContent = 'Find Files';
-      validateCode();
-  }
-
-  // --- Utility Functions ---
+  // --- UTILITY FUNCTIONS ---
   function formatBytes(bytes, decimals = 2) {
       if (bytes === 0) return '0 Bytes';
       const k = 1024;
@@ -266,12 +363,11 @@ document.addEventListener('DOMContentLoaded', () => {
       return parseFloat((bytes / Math.pow(k, i)).toFixed(dm)) + ' ' + sizes[i];
   }
 
-  function showToast(message, isError = false) {
+  function showToast(message, type = "success") {
       toastMessage.textContent = message;
-      toast.classList.add('show');
-      toast.classList.toggle('error', isError);
+      toast.className = `toast show ${type}`;
       setTimeout(() => {
-          toast.classList.remove('show');
+          toast.className = 'toast';
       }, 3000);
   }
 });
