@@ -3,11 +3,10 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>FileSync - Secure File Sharing</title>
+  <title>FileSync - P2P File Sharing</title>
 
   <link rel="stylesheet" href="style.css" />
   <script src="https://unpkg.com/lucide-react@0.292.0/dist/umd/lucide.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="https://www.gstatic.com/firebasejs/9.15.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.15.0/firebase-database-compat.js"></script>
 </head>
@@ -38,7 +37,7 @@
       <!-- Send Files -->
       <div id="send-card" class="card">
         <h2 class="card-title">Send Files</h2>
-        <p class="card-description">Share files securely with a simple 4-digit code.</p>
+        <p class="card-description">Share files instantly with a secure 4-digit code (Peer-to-Peer).</p>
 
         <div id="upload-section">
           <div id="drop-zone" class="drop-zone">
@@ -47,7 +46,7 @@
               <i data-lucide="upload-cloud"></i>
             </div>
             <p class="drop-zone-text">Drop files here or click to browse</p>
-            <p class="drop-zone-subtext">Support for multiple files up to 100MB each</p>
+            <p class="drop-zone-subtext">Direct transfer, no cloud storage</p>
             <button id="browse-btn" class="button">Choose Files</button>
           </div>
         </div>
@@ -58,7 +57,7 @@
       <!-- Receive Files -->
       <div class="card">
         <h2 class="card-title">Receive Files</h2>
-        <p class="card-description">Enter the 4-digit code to download files.</p>
+        <p class="card-description">Enter the 4-digit code to connect and receive files (P2P).</p>
 
         <div class="receive-form">
           <label class="form-label">Enter Transfer Code</label>
@@ -68,14 +67,14 @@
             <input type="text" maxlength="1" class="code-input" data-index="2" />
             <input type="text" maxlength="1" class="code-input" data-index="3" />
           </div>
-          <button id="find-btn" class="button" disabled>Find Files</button>
+          <button id="find-btn" class="button" disabled>Connect</button>
         </div>
 
         <div class="transfers-section">
-          <h3 class="transfers-title">Files in Transfer</h3>
+          <h3 class="transfers-title">Files Received</h3>
           <div id="transfers-list" class="transfers-list">
             <i data-lucide="download-cloud" class="placeholder-icon"></i>
-            <p>No recent transfers</p>
+            <p>No transfers yet</p>
           </div>
         </div>
       </div>
@@ -84,34 +83,34 @@
     <!-- Why Choose Section -->
     <section class="features-section">
       <h2 class="features-title">Why Choose File-Sync by MHR3D?</h2>
-      <p class="features-description">Secure, fast, and intelligent file sharing that adapts to your needs.</p>
+      <p class="features-description">Fast, secure, and private file sharing directly between devices.</p>
       <div class="features-grid">
         <div class="feature-item">
           <div class="feature-icon-container green">
             <i data-lucide="shield-check" class="feature-icon"></i>
           </div>
-          <h3 class="feature-item-title">Secure Transfer</h3>
-          <p class="feature-item-description">End-to-end encryption for all file transfers.</p>
+          <h3 class="feature-item-title">End-to-End P2P</h3>
+          <p class="feature-item-description">Files never touch a server, only between you and your peer.</p>
         </div>
         <div class="feature-item">
           <div class="feature-icon-container yellow">
-            <i data-lucide="route" class="feature-icon"></i>
+            <i data-lucide="zap" class="feature-icon"></i>
           </div>
-          <h3 class="feature-item-title">Smart Routing</h3>
-          <p class="feature-item-description">Automatic selection between client and P2P transfer.</p>
+          <h3 class="feature-item-title">Instant Transfers</h3>
+          <p class="feature-item-description">Connect and send files in seconds using a short code.</p>
         </div>
         <div class="feature-item">
           <div class="feature-icon-container purple">
             <i data-lucide="smartphone" class="feature-icon"></i>
           </div>
-          <h3 class="feature-item-title">Mobile-Ready</h3>
-          <p class="feature-item-description">QR codes for instant mobile access.</p>
+          <h3 class="feature-item-title">Mobile Friendly</h3>
+          <p class="feature-item-description">Scan QR codes to send or receive files on the go.</p>
         </div>
       </div>
     </section>
 
     <footer class="footer">
-      <p>&copy; 2024 FileSync. Secure file sharing made simple.</p>
+      <p>&copy; 2024 FileSync. Peer-to-peer file sharing made simple.</p>
     </footer>
   </div>
 
