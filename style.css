@@ -423,3 +423,58 @@ body {
 .download-icon {
     color: var(--primary);
 }
+.toast {
+  position: fixed;
+  bottom: 1.25rem;
+  right: 1.25rem;
+  background-color: #333;
+  color: #fff;
+  padding: 0.75rem 1.25rem;
+  border-radius: 0.5rem;
+  opacity: 0;
+  transform: translateY(30px);
+  transition: all 0.3s ease-in-out;
+  z-index: 9999;
+  box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+}
+.toast.show {
+  opacity: 1;
+  transform: translateY(0);
+}
+.toast.success {
+  background-color: #10b981;
+}
+.toast.error {
+  background-color: #ef4444;
+}
+.upload-status {
+  margin-top: 1.5rem;
+}
+.upload-item {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 0.75rem;
+  border: 1px solid var(--border);
+  border-radius: 0.5rem;
+  margin-bottom: 0.75rem;
+}
+.upload-item.completed .progress-bar {
+  background-color: #10b981;
+}
+.upload-item.error .progress-bar {
+  background-color: #ef4444;
+}
+.progress-wrapper {
+  width: 100px;
+  height: 8px;
+  background-color: var(--secondary);
+  border-radius: 999px;
+  overflow: hidden;
+}
+.progress-bar {
+  height: 100%;
+  width: 0;
+  background-color: var(--primary);
+  transition: width 0.3s ease;
+}

@@ -1,126 +1,125 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>FileSync - Secure File Sharing</title>
-    <link rel="stylesheet" href="style.css">
-    <script src="https://unpkg.com/lucide-react@0.292.0/dist/umd/lucide.min.js"></script>
-    
-    <!-- Supabase SDK -->
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>FileSync - Secure File Sharing</title>
 
-    <!-- Firebase SDKs -->
-    <!-- NOTE: Using the 'compat' libraries to match the syntax in script.js -->
-    <script src="https://www.gstatic.com/firebasejs/9.15.0/firebase-app-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/9.15.0/firebase-database-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/9.15.0/firebase-storage-compat.js"></script>
+  <link rel="stylesheet" href="style.css" />
+  <script src="https://unpkg.com/lucide-react@0.292.0/dist/umd/lucide.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.15.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.15.0/firebase-database-compat.js"></script>
 </head>
 <body>
 
-    <div class="container">
-        <!-- Header -->
-        <header class="header">
-            <div class="logo">
-                <div class="logo-icon">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" x2="12" y1="3" y2="15"/></svg>
-                </div>
-                <h1 class="logo-text">File-sync by MHR3D</h1>
+  <div class="container">
+    <!-- Header -->
+    <header class="header">
+      <div class="logo">
+        <div class="logo-icon">
+          <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24"
+               viewBox="0 0 24 24" fill="none" stroke="currentColor"
+               stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+            <polyline points="17 8 12 3 7 8"/>
+            <line x1="12" x2="12" y1="3" y2="15"/>
+          </svg>
+        </div>
+        <h1 class="logo-text">File-sync by MHR3D</h1>
+      </div>
+      <button id="theme-toggle" class="theme-toggle">
+        <i data-lucide="sun" class="sun-icon"></i>
+        <i data-lucide="moon" class="moon-icon"></i>
+      </button>
+    </header>
+
+    <main class="main-content">
+      <!-- Send Files -->
+      <div id="send-card" class="card">
+        <h2 class="card-title">Send Files</h2>
+        <p class="card-description">Share files securely with a simple 4-digit code.</p>
+
+        <div id="upload-section">
+          <div id="drop-zone" class="drop-zone">
+            <input type="file" id="file-input" class="hidden" multiple />
+            <div class="upload-icon-container">
+              <i data-lucide="upload-cloud"></i>
             </div>
-            <button id="theme-toggle" class="theme-toggle">
-                <i data-lucide="sun" class="sun-icon"></i>
-                <i data-lucide="moon" class="moon-icon"></i>
-            </button>
-        </header>
+            <p class="drop-zone-text">Drop files here or click to browse</p>
+            <p class="drop-zone-subtext">Support for multiple files up to 100MB each</p>
+            <button id="browse-btn" class="button">Choose Files</button>
+          </div>
+        </div>
 
-        <main class="main-content">
-            <!-- Send Files Card -->
-            <div id="send-card" class="card">
-                <h2 class="card-title">Send Files</h2>
-                <p class="card-description">Share files securely with a simple 4-digit code.</p>
-                
-                <div id="upload-section">
-                    <div id="drop-zone" class="drop-zone">
-                        <input type="file" id="file-input" class="hidden" multiple>
-                        <div class="upload-icon-container">
-                            <i data-lucide="upload-cloud"></i>
-                        </div>
-                        <p class="drop-zone-text">Drop files here or click to browse</p>
-                        <p class="drop-zone-subtext">Support for multiple files up to 100MB each</p>
-                        <button id="browse-btn" class="button">
-                          Choose Files
-                      </button>
-                    </div>
-                </div>
+        <div id="upload-status-section" class="upload-status hidden"></div>
+      </div>
 
-                <div id="upload-status-section" class="upload-status hidden"></div>
-            </div>
+      <!-- Receive Files -->
+      <div class="card">
+        <h2 class="card-title">Receive Files</h2>
+        <p class="card-description">Enter the 4-digit code to download files.</p>
 
-            <!-- Receive Files Card -->
-            <div class="card">
-                <h2 class="card-title">Receive Files</h2>
-                <p class="card-description">Enter the 4-digit code to download files.</p>
-                
-                <div class="receive-form">
-                    <label class="form-label">Enter Transfer Code</label>
-                    <div id="code-inputs" class="code-inputs-container">
-                        <input type="text" maxlength="1" class="code-input" data-index="0">
-                        <input type="text" maxlength="1" class="code-input" data-index="1">
-                        <input type="text" maxlength="1" class="code-input" data-index="2">
-                        <input type="text" maxlength="1" class="code-input" data-index="3">
-                    </div>
-                    <button id="find-btn" class="button" disabled>
-                        Find Files
-                    </button>
-                </div>
+        <div class="receive-form">
+          <label class="form-label">Enter Transfer Code</label>
+          <div id="code-inputs" class="code-inputs-container">
+            <input type="text" maxlength="1" class="code-input" data-index="0" />
+            <input type="text" maxlength="1" class="code-input" data-index="1" />
+            <input type="text" maxlength="1" class="code-input" data-index="2" />
+            <input type="text" maxlength="1" class="code-input" data-index="3" />
+          </div>
+          <button id="find-btn" class="button" disabled>Find Files</button>
+        </div>
 
-                <div class="transfers-section">
-                    <h3 class="transfers-title">Files in Transfer</h3>
-                    <div id="transfers-list" class="transfers-list">
-                        <i data-lucide="download-cloud" class="placeholder-icon"></i>
-                        <p>No recent transfers</p>
-                    </div>
-                </div>
-            </div>
-        </main>
-        
-        <section class="features-section">
-            <h2 class="features-title">Why Choose File-Sync by MHR3D?</h2>
-            <p class="features-description">Secure, fast, and intelligent file sharing that adapts to your needs.</p>
-            <div class="features-grid">
-                <div class="feature-item">
-                    <div class="feature-icon-container green">
-                        <i data-lucide="shield-check" class="feature-icon"></i>
-                    </div>
-                    <h3 class="feature-item-title">Secure Transfer</h3>
-                    <p class="feature-item-description">End-to-end encryption for all file transfers.</p>
-                </div>
-                <div class="feature-item">
-                    <div class="feature-icon-container yellow">
-                        <i data-lucide="route" class="feature-icon"></i>
-                    </div>
-                    <h3 class="feature-item-title">Smart Routing</h3>
-                    <p class="feature-item-description">Automatic selection between client and P2P transfer.</p>
-                </div>
-                <div class="feature-item">
-                     <div class="feature-icon-container purple">
-                        <i data-lucide="smartphone" class="feature-icon"></i>
-                    </div>
-                    <h3 class="feature-item-title">Mobile-Ready</h3>
-                    <p class="feature-item-description">QR codes for instant mobile access.</p>
-                </div>
-            </div>
-        </section>
+        <div class="transfers-section">
+          <h3 class="transfers-title">Files in Transfer</h3>
+          <div id="transfers-list" class="transfers-list">
+            <i data-lucide="download-cloud" class="placeholder-icon"></i>
+            <p>No recent transfers</p>
+          </div>
+        </div>
+      </div>
+    </main>
 
-        <footer class="footer">
-            <p>&copy; 2024 FileSync. Secure file sharing made simple.</p>
-        </footer>
-    </div>
+    <!-- Why Choose Section -->
+    <section class="features-section">
+      <h2 class="features-title">Why Choose File-Sync by MHR3D?</h2>
+      <p class="features-description">Secure, fast, and intelligent file sharing that adapts to your needs.</p>
+      <div class="features-grid">
+        <div class="feature-item">
+          <div class="feature-icon-container green">
+            <i data-lucide="shield-check" class="feature-icon"></i>
+          </div>
+          <h3 class="feature-item-title">Secure Transfer</h3>
+          <p class="feature-item-description">End-to-end encryption for all file transfers.</p>
+        </div>
+        <div class="feature-item">
+          <div class="feature-icon-container yellow">
+            <i data-lucide="route" class="feature-icon"></i>
+          </div>
+          <h3 class="feature-item-title">Smart Routing</h3>
+          <p class="feature-item-description">Automatic selection between client and P2P transfer.</p>
+        </div>
+        <div class="feature-item">
+          <div class="feature-icon-container purple">
+            <i data-lucide="smartphone" class="feature-icon"></i>
+          </div>
+          <h3 class="feature-item-title">Mobile-Ready</h3>
+          <p class="feature-item-description">QR codes for instant mobile access.</p>
+        </div>
+      </div>
+    </section>
 
-    <div id="toast" class="toast">
-        <p id="toast-message">An error occurred!</p>
-    </div>
+    <footer class="footer">
+      <p>&copy; 2024 FileSync. Secure file sharing made simple.</p>
+    </footer>
+  </div>
 
-    <script src="script.js"></script>
+  <!-- Toast Notification -->
+  <div id="toast" class="toast">
+    <p id="toast-message">An error occurred!</p>
+  </div>
+
+  <script src="script.js"></script>
 </body>
 </html>
