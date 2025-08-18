@@ -7,6 +7,8 @@
 
   <link rel="stylesheet" href="style.css" />
   <script src="https://unpkg.com/lucide-react@0.292.0/dist/umd/lucide.min.js"></script>
+
+  <!-- Firebase (for signaling only) -->
   <script src="https://www.gstatic.com/firebasejs/9.15.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.15.0/firebase-database-compat.js"></script>
 </head>
@@ -27,7 +29,12 @@
         </div>
         <h1 class="logo-text">File-sync by MHR3D</h1>
       </div>
-      <button id="theme-toggle" class="theme-toggle">
+
+      <div class="status-pill" id="conn-status" title="Connection status">
+        <span class="dot dot-red"></span><span class="status-text">Idle</span>
+      </div>
+
+      <button id="theme-toggle" class="theme-toggle" aria-label="Toggle theme">
         <i data-lucide="sun" class="sun-icon"></i>
         <i data-lucide="moon" class="moon-icon"></i>
       </button>
@@ -40,15 +47,25 @@
         <p class="card-description">Share files instantly with a secure 4-digit code (Peer-to-Peer).</p>
 
         <div id="upload-section">
-          <div id="drop-zone" class="drop-zone">
+          <div id="drop-zone" class="drop-zone" tabindex="0" role="button" aria-label="Drop files here or click to browse">
             <input type="file" id="file-input" class="hidden" multiple />
             <div class="upload-icon-container">
               <i data-lucide="upload-cloud"></i>
             </div>
             <p class="drop-zone-text">Drop files here or click to browse</p>
             <p class="drop-zone-subtext">Direct transfer, no cloud storage</p>
-            <button id="browse-btn" class="button">Choose Files</button>
+            <button id="browse-btn" class="button" type="button">Choose Files</button>
           </div>
+        </div>
+
+        <div class="generated-code-container hidden" id="share-code-wrap">
+          <div id="share-code" class="generated-code">----</div>
+          <button id="copy-code" class="icon-button" title="Copy code" aria-label="Copy code">
+            <i data-lucide="copy"></i>
+          </button>
+          <button id="qr-code" class="icon-button" title="Show QR" aria-label="Show QR">
+            <i data-lucide="qr-code"></i>
+          </button>
         </div>
 
         <div id="upload-status-section" class="upload-status hidden"></div>
@@ -60,14 +77,14 @@
         <p class="card-description">Enter the 4-digit code to connect and receive files (P2P).</p>
 
         <div class="receive-form">
-          <label class="form-label">Enter Transfer Code</label>
+          <label class="form-label" for="code-inputs">Enter Transfer Code</label>
           <div id="code-inputs" class="code-inputs-container">
-            <input type="text" maxlength="1" class="code-input" data-index="0" />
-            <input type="text" maxlength="1" class="code-input" data-index="1" />
-            <input type="text" maxlength="1" class="code-input" data-index="2" />
-            <input type="text" maxlength="1" class="code-input" data-index="3" />
+            <input type="text" maxlength="1" class="code-input" data-index="0" inputmode="numeric" />
+            <input type="text" maxlength="1" class="code-input" data-index="1" inputmode="numeric" />
+            <input type="text" maxlength="1" class="code-input" data-index="2" inputmode="numeric" />
+            <input type="text" maxlength="1" class="code-input" data-index="3" inputmode="numeric" />
           </div>
-          <button id="find-btn" class="button" disabled>Connect</button>
+          <button id="find-btn" class="button" disabled type="button">Connect</button>
         </div>
 
         <div class="transfers-section">
@@ -115,7 +132,7 @@
   </div>
 
   <!-- Toast Notification -->
-  <div id="toast" class="toast">
+  <div id="toast" class="toast" role="status" aria-live="polite">
     <p id="toast-message">An error occurred!</p>
   </div>
 
